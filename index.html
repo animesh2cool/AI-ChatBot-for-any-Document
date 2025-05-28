@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI RAG Chatbot - Document Intelligence</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --dark-gradient: linear-gradient(135deg, #232526 0%, #414345 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .main-container {
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.bot {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .message.user .message-bubble {
+            background: var(--secondary-gradient);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot .message-bubble {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-gradient {
+            background: var(--secondary-gradient);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            color: white;
+        }
+
+        .btn-upload {
+            background: var(--success-gradient);
+        }
+
+        .btn-clear {
+            background: var(--warning-gradient);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #4facfe;
+            background: rgba(79, 172, 254, 0.1);
+        }
+
+        .document-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .document-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #4facfe;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+        }
+
+        .status-offline {
+            background: #ff6b6b;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            margin: 0 2px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typingAnimation {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast {
+            background: var(--success-gradient);
+            border: none;
+            color: white;
+        }
+
+        .progress-bar {
+            background: var(--secondary-gradient);
+        }
+
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #4facfe;
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .source-tags {
+            margin-top: 10px;
+        }
+
+        .source-tag {
+            background: rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin: 2px;
+            display: inline-block;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-body {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid main-container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="bi bi-robot"></i> AI Document Intelligence</h1>
+            <p>Powered by Llama-4, LangChain & RAG Technology</p>
+            <div class="mt-3">
+                <span class="status-indicator status-online" id="connectionStatus"></span>
+                <span id="connectionText">Connected</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Chat Section -->
+            <div class="col-lg-8 mb-4">
+                <div class="card glass-effect chat-container">
+                    <div class="card-header bg-transparent border-0 text-white">
+                        <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Chat with Your Documents</h5>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot">
+                            <div class="message-bubble">
+                                <i class="bi bi-robot"></i> Hello! I'm your AI assistant. Upload some documents and start asking questions about them!
+                            </div>
+                        </div>
+                    </div>
+                    <div class="typing-indicator" id="typingIndicator">
+                        <i class="bi bi-robot"></i> AI is thinking
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="text" class="form-control" id="messageInput" 
+                                       placeholder="Ask me anything about your documents..." 
+                                       onkeypress="handleKeyPress(event)">
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="useContextSwitch" checked>
+                                    <label class="form-check-label text-white" for="useContextSwitch">
+                                        Use RAG
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-gradient" onclick="sendMessage()">
+                                    <i class="bi bi-send"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="col-lg-4">
+                <!-- Upload Section -->
+                <div class="card glass-effect mb-4">
+                    <div class="card-header bg-transparent border-0 text-white">
+                        <h5 class="mb-0"><i class="bi bi-cloud-upload"></i> Upload Documents</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                            <h5>Drop files here or click to browse</h5>
+                            <p class="mb-0">Support PDF, TXT files</p>
+                        </div>
+                        <input type="file" id="fileInput" multiple accept=".pdf,.txt" style="display: none;" onchange="handleFileSelect(event)">
+                        
+                        <div class="mt-3 d-grid gap-2">
+                            <button class="btn btn-gradient btn-upload" onclick="uploadFiles()">
+                                <i class="bi bi-upload"></i> Upload Selected Files
+                            </button>
+                        </div>
+
+                        <div class="progress mt-3" id="uploadProgress" style="display: none;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents List -->
+                <div class="card glass-effect mb-4">
+                    <div class="card-header bg-transparent border-0 text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-files"></i> Uploaded Documents</h5>
+                        <button class="btn btn-sm btn-gradient btn-clear" onclick="clearAllDocuments()">
+                            <i class="bi bi-trash"></i> Clear All
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="documentsList">
+                            <p class="text-center text-white-50">No documents uploaded yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card glass-effect">
+                    <div class="card-header bg-transparent border-0 text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>API Connection:</span>
+                            <span id="apiStatus" class="badge bg-success">Online</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Documents Loaded:</span>
+                            <span id="docCount" class="badge bg-info">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Vector Store:</span>
+                            <span id="vectorStatus" class="badge bg-warning">Not Ready</span>
+                        </div>
+                        <button class="btn btn-sm btn-gradient w-100 mt-3" onclick="checkHealth()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Status
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="notificationToast" class="toast" role="alert">
+            <div class="toast-header bg-transparent text-white border-0">
+                <i class="bi bi-bell me-2"></i>
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body text-white">
+                <span id="toastMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let selectedFiles = [];
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            checkHealth();
+            loadDocuments();
+            setupDragAndDrop();
+        });
+
+        // Setup drag and drop functionality
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFileSelect({ target: { files: e.dataTransfer.files } });
+            });
+        }
+
+        // Handle file selection
+        function handleFileSelect(event) {
+            selectedFiles = Array.from(event.target.files);
+            updateFileDisplay();
+        }
+
+        // Update file display
+        function updateFileDisplay() {
+            const uploadArea = document.getElementById('uploadArea');
+            if (selectedFiles.length > 0) {
+                uploadArea.innerHTML = `
+                    <i class="bi bi-files" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <h5>${selectedFiles.length} file(s) selected</h5>
+                    <p class="mb-0">${selectedFiles.map(f => f.name).join(', ')}</p>
+                `;
+            }
+        }
+
+        // Upload files
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) {
+                showToast('Please select files first', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            showProgress(true);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload-multiple`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Documents uploaded successfully!', 'success');
+                    selectedFiles = [];
+                    resetUploadArea();
+                    loadDocuments();
+                    checkHealth();
+                } else {
+                    showToast(result.detail || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                showToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                showProgress(false);
+            }
+        }
+
+        // Reset upload area
+        function resetUploadArea() {
+            document.getElementById('uploadArea').innerHTML = `
+                <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                <h5>Drop files here or click to browse</h5>
+                <p class="mb-0">Support PDF, TXT files</p>
+            `;
+            document.getElementById('fileInput').value = '';
+        }
+
+        // Show/hide progress bar
+        function showProgress(show) {
+            const progressBar = document.getElementById('uploadProgress');
+            if (show) {
+                progressBar.style.display = 'block';
+                progressBar.querySelector('.progress-bar').style.width = '100%';
+            } else {
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    progressBar.querySelector('.progress-bar').style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        // Send chat message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            addMessage('user', message);
+            input.value = '';
+            showTyping(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: message,
+                        use_context: document.getElementById('useContextSwitch').checked
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    addMessage('bot', result.response, result.sources);
+                } else {
+                    addMessage('bot', 'Sorry, I encountered an error: ' + result.detail);
+                }
+            } catch (error) {
+                addMessage('bot', 'Sorry, I couldn\'t process your message. Please check if the server is running.');
+            } finally {
+                showTyping(false);
+            }
+        }
+
+        // Handle enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Add message to chat
+        function addMessage(sender, text, sources = []) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            let sourceTags = '';
+            if (sources && sources.length > 0) {
+                sourceTags = '<div class="source-tags">' + 
+                    sources.map(source => `<span class="source-tag">${source.split('/').pop()}</span>`).join('') +
+                    '</div>';
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${sender === 'bot' ? '<i class="bi bi-robot"></i> ' : '<i class="bi bi-person"></i> '}
+                    ${text}
+                    ${sourceTags}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Show typing indicator
+        function showTyping(show) {
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.style.display = show ? 'block' : 'none';
+            
+            if (show) {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        // Load documents list
+        async function loadDocuments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents`);
+                const result = await response.json();
+                
+                const documentsList = document.getElementById('documentsList');
+                
+                if (result.documents && result.documents.length > 0) {
+                    documentsList.innerHTML = result.documents.map(doc => `
+                        <div class="document-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-file-text me-2"></i>
+                                    <strong>${doc.filename}</strong>
+                                    <small class="d-block text-white-50">
+                                        ${(doc.size / 1024).toFixed(1)} KB
+                                    </small>
+                                </div>
+                                <button class="btn btn-sm btn-gradient btn-delete" 
+                                        onclick="deleteDocument('${doc.filename}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('docCount').textContent = result.documents.length;
+                } else {
+                    documentsList.innerHTML = '<p class="text-center text-white-50">No documents uploaded yet</p>';
+                    document.getElementById('docCount').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Failed to load documents:', error);
+            }
+        }
+
+        // Delete document
+        async function deleteDocument(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast('Document deleted successfully', 'success');
+                    loadDocuments();
+                    checkHealth();
+                } else {
+                    showToast('Failed to delete document', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to delete document: ' + error.message, 'error');
+            }
+        }
+
+        // Clear all documents
+        async function clearAllDocuments() {
+            if (!confirm('Are you sure you want to delete all documents?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast('All documents cleared successfully', 'success');
+                    loadDocuments();
+                    checkHealth();
+                } else {
+                    showToast('Failed to clear documents', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to clear documents: ' + error.message, 'error');
+            }
+        }
+
+        // Check system health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const result = await response.json();
+                
+                // Update connection status
+                const statusIndicator = document.getElementById('connectionStatus');
+                const statusText = document.getElementById('connectionText');
+                const apiStatus = document.getElementById('apiStatus');
+                const vectorStatus = document.getElementById('vectorStatus');
+                
+                if (response.ok) {
+                    statusIndicator.className = 'status-indicator status-online';
+                    statusText.textContent = 'Connected';
+                    apiStatus.textContent = 'Online';
+                    apiStatus.className = 'badge bg-success';
+                    
+                    vectorStatus.textContent = result.vectorstore_ready ? 'Ready' : 'Not Ready';
+                    vectorStatus.className = result.vectorstore_ready ? 'badge bg-success' : 'badge bg-warning';
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                const statusIndicator = document.getElementById('connectionStatus');
+                const statusText = document.getElementById('connectionText');
+                const apiStatus = document.getElementById('apiStatus');
+                
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Disconnected';
+                apiStatus.textContent = 'Offline';
+                apiStatus.className = 'badge bg-danger';
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('notificationToast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // Update toast color based on type
+            toast.className = 'toast';
+            if (type === 'success') {
+                toast.style.background = 'var(--success-gradient)';
+            } else if (type === 'error') {
+                toast.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
+            } else if (type === 'warning') {
+                toast.style.background = 'var(--warning-gradient)';
+            }
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+
+        // Auto-refresh system status every 30 seconds
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>
